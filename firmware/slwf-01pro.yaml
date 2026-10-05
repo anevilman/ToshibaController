@@ -1,0 +1,459 @@
+# SLWF-01pro control board.
+# UART pins, board, and AC options come from SmartLight slwf01pro24.yaml (r2.1).
+# The night cycle is a clock slot. Each second, if Schedule is on and the
+# time is inside the window, the stick compares the unit to that slot and
+# sends Cool or Fan only when the unit is in a different mode.
+#
+#   POST /switch/Schedule/turn_on|turn_off
+#   POST /time/Window%20start/set?value=20:00:00
+#   POST /time/Window%20end/set?value=08:00:00
+#   POST /number/Cool%20minutes/set?value=9
+#   POST /number/Fan%20minutes/set?value=11
+#   POST /number/Cool%20temperature/set?value=62
+#   POST /select/Mode/set?option=Cool|Dry|Fan|Off
+#   POST /select/Fan%20speed/set?option=Auto|Low|Medium|High|Silent|Turbo
+#   POST /select/Schedule%20fan/set?option=Auto|Low|Medium|High|Silent|Turbo
+#   POST /button/Air%20Conditioner%20Display%20Toggle/press
+#   POST /climate/Air%20Conditioner/set?preset=NONE|ECO
+
+substitutions:
+  name: air-conditioner
+  wifi_ap_ssid: "AC-wifi"
+  wifi_ap_password: "slwf01pro"
+
+esphome:
+  name: "${name}"
+  name_add_mac_suffix: true
+  project:
+    name: toshiba.night-cycle
+    version: "0.1.0"
+
+esp8266:
+  board: esp12e
+
+# No compiled-in network. The stick already saved the house Wi-Fi from its
+# setup page, and a placeholder network would replace that saved login.
+# If the saved login is missing after this update, the stick opens AC-wifi.
+wifi:
+  ap:
+    ssid: "${wifi_ap_ssid}"
+    password: "${wifi_ap_password}"
+
+captive_portal:
+
+logger:
+  baud_rate: 0
+
+api:
+
+ota:
+  - platform: esphome
+  - platform: web_server
+
+web_server:
+  port: 80
+  version: 2
+
+time:
+  - platform: sntp
+    id: house_time
+    timezone: !secret timezone
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+
+uart:
+  tx_pin: 12
+  rx_pin: 14
+  baud_rate: 9600
+
+remote_transmitter:
+  pin: GPIO13
+  carrier_duty_percent: 100%
+
+globals:
+  - id: ready_for_commands
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: suppress_mode
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: suppress_fan
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Schedule corrections use Schedule fan. A manual mode change uses Fan speed.
+  - id: applying_schedule
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          id(ready_for_commands) = true;
+          auto now = id(house_time).now();
+          if (now.is_valid()) {
+            char buf[24];
+            now.strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S");
+            id(clock_sensor).publish_state(buf);
+          } else {
+            id(clock_sensor).publish_state("no clock");
+          }
+
+          auto publish_phase = [](const char *phase, int seconds_left) {
+            id(schedule_phase).publish_state(phase);
+            id(phase_seconds_sensor).publish_state((float) seconds_left);
+          };
+
+          if (!id(schedule_switch).state) {
+            publish_phase("idle", 0);
+          } else if (!now.is_valid()) {
+            publish_phase("no clock", 0);
+          } else {
+            int now_s = now.hour * 3600 + now.minute * 60 + now.second;
+            int start_s = id(window_start).hour * 3600 + id(window_start).minute * 60 + id(window_start).second;
+            int end_s = id(window_end).hour * 3600 + id(window_end).minute * 60 + id(window_end).second;
+            bool inside = false;
+            if (start_s == end_s) {
+              inside = false;
+            } else if (start_s < end_s) {
+              inside = now_s >= start_s && now_s < end_s;
+            } else {
+              inside = now_s >= start_s || now_s < end_s;
+            }
+            if (!inside) {
+              publish_phase("waiting", 0);
+            } else {
+              int cool = (int) (id(cool_minutes).state * 60.0f);
+              int fan = (int) (id(fan_minutes).state * 60.0f);
+              if (cool < 60) cool = 60;
+              if (fan < 60) fan = 60;
+              int offset = now_s - start_s;
+              if (offset < 0) offset += 24 * 60 * 60;
+              int into = offset % (cool + fan);
+              bool want_cool = into < cool;
+              int seconds_left = want_cool ? cool - into : cool + fan - into;
+              publish_phase(want_cool ? "cool" : "fan", seconds_left);
+              auto mode = id(midea_climate).mode;
+              bool already = (want_cool && mode == CLIMATE_MODE_COOL) || (!want_cool && mode == CLIMATE_MODE_FAN_ONLY);
+              if (!already) {
+                id(applying_schedule) = true;
+                auto call = id(mode_select).make_call();
+                call.set_option(want_cool ? "Cool" : "Fan");
+                call.perform();
+                id(applying_schedule) = false;
+              }
+            }
+          }
+
+button:
+  - platform: factory_reset
+    name: Factory reset
+  - platform: template
+    name: Air Conditioner Display Toggle
+    id: midea_display_toggle
+    icon: mdi:theme-light-dark
+    on_press:
+      midea_ac.display_toggle:
+  - platform: template
+    name: Air Conditioner Swing Step
+    id: midea_swing_step
+    icon: mdi:tailwind
+    on_press:
+      midea_ac.swing_step:
+
+switch:
+  - platform: template
+    name: Air Conditioner Beeper
+    id: midea_beeper
+    icon: mdi:volume-source
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+    turn_on_action:
+      midea_ac.beeper_on:
+    turn_off_action:
+      midea_ac.beeper_off:
+  - platform: template
+    name: Schedule
+    id: schedule_switch
+    icon: mdi:calendar-clock
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+number:
+  - platform: template
+    name: Cool minutes
+    id: cool_minutes
+    optimistic: true
+    restore_value: true
+    initial_value: 9
+    min_value: 1
+    max_value: 180
+    step: 1
+    unit_of_measurement: min
+    mode: box
+  - platform: template
+    name: Fan minutes
+    id: fan_minutes
+    optimistic: true
+    restore_value: true
+    initial_value: 11
+    min_value: 1
+    max_value: 180
+    step: 1
+    unit_of_measurement: min
+    mode: box
+  - platform: template
+    name: Cool temperature
+    id: cool_temperature
+    optimistic: true
+    restore_value: true
+    initial_value: 62
+    min_value: 62
+    max_value: 86
+    step: 1
+    unit_of_measurement: "°F"
+    mode: slider
+    set_action:
+      - lambda: |-
+          if (!id(ready_for_commands)) return;
+          if (id(midea_climate).mode != CLIMATE_MODE_COOL) return;
+          float c = (x - 32.0f) * 5.0f / 9.0f;
+          if (c < 17.0f) c = 17.0f;
+          if (c > 30.0f) c = 30.0f;
+          auto call = id(midea_climate).make_call();
+          call.set_target_temperature(c);
+          call.perform();
+
+select:
+  - platform: template
+    name: Mode
+    id: mode_select
+    icon: mdi:thermostat
+    optimistic: true
+    restore_value: true
+    initial_option: "Off"
+    options:
+      - "Off"
+      - Cool
+      - Dry
+      - Fan
+    set_action:
+      - lambda: |-
+          if (id(suppress_mode)) {
+            id(suppress_mode) = false;
+            return;
+          }
+          if (!id(ready_for_commands)) return;
+          auto call = id(midea_climate).make_call();
+          auto fan = id(applying_schedule) ? id(schedule_fan).current_option() : id(fan_select).current_option();
+          auto apply_fan = [&]() {
+            if (fan == "Silent") call.set_fan_mode("Silent");
+            else if (fan == "Turbo") call.set_fan_mode("Turbo");
+            else if (fan == "High") call.set_fan_mode("HIGH");
+            else if (fan == "Medium") call.set_fan_mode("MEDIUM");
+            else if (fan == "Auto") call.set_fan_mode("AUTO");
+            else call.set_fan_mode("LOW");
+          };
+          if (x == "Cool") {
+            float c = (id(cool_temperature).state - 32.0f) * 5.0f / 9.0f;
+            if (c < 17.0f) c = 17.0f;
+            if (c > 30.0f) c = 30.0f;
+            call.set_mode("COOL");
+            call.set_target_temperature(c);
+            apply_fan();
+          } else if (x == "Dry") {
+            call.set_mode("DRY");
+            apply_fan();
+          } else if (x == "Fan") {
+            call.set_mode("FAN_ONLY");
+            apply_fan();
+          } else {
+            call.set_mode("OFF");
+          }
+          id(suppress_fan) = true;
+          call.perform();
+          if (id(applying_schedule) && id(fan_select).current_option() != fan) {
+            id(suppress_fan) = true;
+            auto shown = id(fan_select).make_call();
+            shown.set_option(fan.c_str());
+            shown.perform();
+          }
+  - platform: template
+    name: Fan speed
+    id: fan_select
+    icon: mdi:fan
+    optimistic: true
+    restore_value: true
+    initial_option: Low
+    options:
+      - Auto
+      - Low
+      - Medium
+      - High
+      - Silent
+      - Turbo
+    set_action:
+      - lambda: |-
+          if (id(suppress_fan)) {
+            id(suppress_fan) = false;
+            return;
+          }
+          if (!id(ready_for_commands)) return;
+          if (id(midea_climate).mode == CLIMATE_MODE_OFF) return;
+          auto call = id(midea_climate).make_call();
+          if (x == "Silent") call.set_fan_mode("Silent");
+          else if (x == "Turbo") call.set_fan_mode("Turbo");
+          else if (x == "High") call.set_fan_mode("HIGH");
+          else if (x == "Medium") call.set_fan_mode("MEDIUM");
+          else if (x == "Auto") call.set_fan_mode("AUTO");
+          else call.set_fan_mode("LOW");
+          id(suppress_fan) = true;
+          call.perform();
+  - platform: template
+    name: Schedule fan
+    id: schedule_fan
+    icon: mdi:fan
+    optimistic: true
+    restore_value: true
+    initial_option: Low
+    options:
+      - Auto
+      - Low
+      - Medium
+      - High
+      - Silent
+      - Turbo
+
+datetime:
+  - platform: template
+    name: Window start
+    id: window_start
+    type: time
+    optimistic: true
+    restore_value: true
+    initial_value: "20:00:00"
+  - platform: template
+    name: Window end
+    id: window_end
+    type: time
+    optimistic: true
+    restore_value: true
+    initial_value: "08:00:00"
+
+text_sensor:
+  - platform: template
+    name: Schedule phase
+    id: schedule_phase
+    icon: mdi:progress-clock
+    update_interval: never
+    lambda: return {"idle"};
+  - platform: template
+    name: Clock
+    id: clock_sensor
+    icon: mdi:clock-outline
+    update_interval: never
+    lambda: return {"no clock"};
+
+sensor:
+  - platform: template
+    name: Phase seconds
+    id: phase_seconds_sensor
+    accuracy_decimals: 0
+    unit_of_measurement: s
+    update_interval: never
+    lambda: return 0;
+  - platform: wifi_signal
+    name: Air Conditioner Wi-Fi Signal
+    update_interval: 60s
+  - platform: uptime
+    name: Uptime
+    id: uptime_sec
+    internal: true
+  - platform: template
+    name: Air Conditioner Uptime Days
+    lambda: return (id(uptime_sec).state / 60) / 60 / 24;
+    icon: mdi:clock-start
+    unit_of_measurement: days
+    update_interval: 60s
+
+climate:
+  - platform: midea
+    name: Air Conditioner
+    id: midea_climate
+    period: 1s
+    timeout: 2s
+    num_attempts: 3
+    autoconf: true
+    beeper: false
+    visual:
+      min_temperature: 17 °C
+      max_temperature: 30 °C
+      temperature_step: 1.0 °C
+    supported_modes:
+      - FAN_ONLY
+      - HEAT_COOL
+      - COOL
+      - HEAT
+      - DRY
+    custom_fan_modes:
+      - SILENT
+      - TURBO
+    supported_presets:
+      - ECO
+      - BOOST
+      - SLEEP
+    custom_presets:
+      - FREEZE_PROTECTION
+    supported_swing_modes:
+      - VERTICAL
+      - HORIZONTAL
+      - BOTH
+    outdoor_temperature:
+      name: Air Conditioner Outdoor Temperature
+    power_usage:
+      name: Air Conditioner Power Usage
+    humidity_setpoint:
+      name: Air Conditioner Indoor Humidity
+    on_state:
+      - lambda: |-
+          bool skip_mode = id(suppress_mode);
+          bool skip_fan = id(suppress_fan);
+          id(suppress_mode) = false;
+          id(suppress_fan) = false;
+          if (!skip_mode) {
+            const char *opt = nullptr;
+            if (x.mode == CLIMATE_MODE_COOL) opt = "Cool";
+            else if (x.mode == CLIMATE_MODE_DRY) opt = "Dry";
+            else if (x.mode == CLIMATE_MODE_FAN_ONLY) opt = "Fan";
+            else if (x.mode == CLIMATE_MODE_OFF) opt = "Off";
+            if (opt != nullptr && id(mode_select).current_option() != opt) {
+              id(suppress_mode) = true;
+              auto call = id(mode_select).make_call();
+              call.set_option(opt);
+              call.perform();
+            }
+          }
+          if (skip_fan || x.mode == CLIMATE_MODE_OFF) return;
+          const char *fan_opt = nullptr;
+          if (x.has_custom_fan_mode()) {
+            auto custom = x.get_custom_fan_mode();
+            if (custom == "Silent") fan_opt = "Silent";
+            else if (custom == "Turbo") fan_opt = "Turbo";
+          } else if (x.fan_mode.has_value()) {
+            auto speed = x.fan_mode.value();
+            if (speed == CLIMATE_FAN_HIGH) fan_opt = "High";
+            else if (speed == CLIMATE_FAN_MEDIUM) fan_opt = "Medium";
+            else if (speed == CLIMATE_FAN_AUTO) fan_opt = "Auto";
+            else if (speed == CLIMATE_FAN_LOW) fan_opt = "Low";
+          }
+          if (fan_opt == nullptr || id(fan_select).current_option() == fan_opt) return;
+          id(suppress_fan) = true;
+          auto fan_call = id(fan_select).make_call();
+          fan_call.set_option(fan_opt);
+          fan_call.perform();

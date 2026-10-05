@@ -1,0 +1,39 @@
+# Python environments and bytecode
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local secrets and device state
+firmware/secrets.yaml
+data/
+web/certs/
+web/schedule.json
+.env
+.env.*
+
+# ESPHome and PlatformIO build trees
+.esphome/
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Compiled firmware and other binaries
+*.bin
+*.elf
+*.factory.bin
+*.hex
+*.map
+*.exe
+*.dll
+*.obj
+*.o
+*.a
+*.lib
+*.pyd
+*.so
+*.dylib
+
+# Node
+node_modules/

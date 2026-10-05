@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c1218">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Air">
+  <title>Air</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <p class="eyebrow">Bedroom</p>
+      <h1 id="title">Air</h1>
+      <p class="banner" id="banner" hidden>Can't reach the air conditioner</p>
+    </header>
+
+    <main id="home" class="screen">
+      <section class="modes" aria-label="Mode">
+        <button type="button" class="choice mode" data-mode="Cool" aria-pressed="false">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7v34M24 7l-4 4M24 7l4 4M24 41l-4-4M24 41l4-4M9.2 15.5l29.6 17M9.2 15.5l1.2 5.6M9.2 15.5l5.6-1.2M38.8 32.5l-1.2-5.6M38.8 32.5l-5.6 1.2M9.2 32.5l29.6-17M9.2 32.5l5.6 1.2M9.2 32.5l1.2-5.6M38.8 15.5l-5.6-1.2M38.8 15.5l-1.2 5.6"/></svg>
+          <span>Cool</span>
+        </button>
+        <button type="button" class="choice mode" data-mode="Dry" aria-pressed="false">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7c7 9 12 15 12 22a12 12 0 0 1-24 0c0-7 5-13 12-22z"/></svg>
+          <span>Dry</span>
+        </button>
+        <button type="button" class="choice mode" data-mode="Fan" aria-pressed="false">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 24c0-6 3-10 8-10-1 8-4 12-8 12zm0 0c6 0 10 3 10 8-8-1-12-4-12-8zm0 0c0 6-3 10-8 10 1-8 4-12 8-12zm0 0c-6 0-10-3-10-8 8 1 12 4 12 8z"/><circle cx="24" cy="24" r="2.4"/></svg>
+          <span>Fan</span>
+        </button>
+        <button type="button" class="choice mode" data-mode="Off" aria-pressed="false">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 8v12"/><circle cx="24" cy="26" r="12"/></svg>
+          <span>Off</span>
+        </button>
+      </section>
+
+      <section aria-label="Fan speed">
+        <h2>Fan speed</h2>
+        <div class="speeds">
+          <button type="button" class="choice speed" data-speed="Low" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M20 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="20" cy="24" r="1.8"/><path d="M36 29v-8"/></svg>
+            <span>Low</span>
+          </button>
+          <button type="button" class="choice speed" data-speed="Medium" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="18" cy="24" r="1.8"/><path d="M34 31v-10M40 31v-16"/></svg>
+            <span>Medium</span>
+          </button>
+          <button type="button" class="choice speed" data-speed="High" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="16" cy="24" r="1.8"/><path d="M32 33v-8M37 33v-14M42 33v-20"/></svg>
+            <span>High</span>
+          </button>
+        </div>
+      </section>
+
+      <button type="button" class="eco" id="eco" aria-pressed="false">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 34c6-14 16-20 24-22-2 12-8 22-18 26-3-1-5-2-6-4z"/><path d="M20 32c2-6 6-10 12-13"/></svg>
+        <span class="eco-copy">
+          <strong>Eco</strong>
+          <small id="eco-label">Off</small>
+        </span>
+        <span class="knob" aria-hidden="true"></span>
+      </button>
+
+      <button type="button" class="eco display" id="display">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="11" width="32" height="22" rx="3"/><path d="M18 39h12M24 33v6"/></svg>
+        <span class="eco-copy">
+          <strong>Display</strong>
+          <small>Switch</small>
+        </span>
+      </button>
+    </main>
+
+    <main id="schedule" class="screen" hidden>
+      <button type="button" class="eco" id="schedule-toggle" aria-pressed="false">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="12" width="28" height="26" rx="4"/><path d="M16 8v8M32 8v8M10 20h28"/></svg>
+        <span class="eco-copy">
+          <strong>Schedule</strong>
+          <small id="schedule-label">Off</small>
+        </span>
+        <span class="knob" aria-hidden="true"></span>
+      </button>
+
+      <p class="phase-line" id="phase-line">
+        <strong id="phase-name">Idle</strong>
+        <span id="phase-left"></span>
+      </p>
+
+      <section aria-label="Schedule fan">
+        <h2>Schedule fan</h2>
+        <div class="speeds">
+          <button type="button" class="choice sched-speed" data-speed="Low" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M20 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="20" cy="24" r="1.8"/><path d="M36 29v-8"/></svg>
+            <span>Low</span>
+          </button>
+          <button type="button" class="choice sched-speed" data-speed="Medium" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="18" cy="24" r="1.8"/><path d="M34 31v-10M40 31v-16"/></svg>
+            <span>Medium</span>
+          </button>
+          <button type="button" class="choice sched-speed" data-speed="High" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 24c0-5 2.4-8 6.4-8-.8 6.4-3.2 9.6-6.4 9.6zm0 0c4.8 0 8 2.4 8 6.4-6.4-.8-9.6-3.2-9.6-6.4zm0 0c0 4.8-2.4 8-6.4 8 .8-6.4 3.2-9.6 6.4-9.6zm0 0c-4.8 0-8-2.4-8-6.4 6.4.8 9.6 3.2 9.6 6.4z"/><circle cx="16" cy="24" r="1.8"/><path d="M32 33v-8M37 33v-14M42 33v-20"/></svg>
+            <span>High</span>
+          </button>
+        </div>
+      </section>
+
+      <section aria-label="Window">
+        <h2>Window</h2>
+        <div class="times">
+          <button type="button" class="time-card" id="open-start">
+            <span class="time-k">Start</span>
+            <span class="time-v" id="start-hm">8:00</span>
+            <span class="time-ap" id="start-ap">PM</span>
+          </button>
+          <button type="button" class="time-card" id="open-end">
+            <span class="time-k">End</span>
+            <span class="time-v" id="end-hm">8:00</span>
+            <span class="time-ap" id="end-ap">AM</span>
+          </button>
+        </div>
+      </section>
+
+      <section aria-label="Cycle">
+        <h2>Cycle</h2>
+        <div class="stepper">
+          <div>
+            <strong>Time on</strong>
+            <small>Cool</small>
+          </div>
+          <button type="button" class="nudge" data-field="cool" data-dir="-1" aria-label="Decrease cool minutes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>
+          </button>
+          <input id="cool-min" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Cool minutes" value="9">
+          <button type="button" class="nudge" data-field="cool" data-dir="1" aria-label="Increase cool minutes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
+          </button>
+          <span class="unit">min</span>
+        </div>
+        <div class="stepper">
+          <div>
+            <strong>Time off</strong>
+            <small>Fan only</small>
+          </div>
+          <button type="button" class="nudge" data-field="fan" data-dir="-1" aria-label="Decrease fan minutes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>
+          </button>
+          <input id="fan-min" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Fan minutes" value="11">
+          <button type="button" class="nudge" data-field="fan" data-dir="1" aria-label="Increase fan minutes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
+          </button>
+          <span class="unit">min</span>
+        </div>
+      </section>
+    </main>
+
+    <nav>
+      <button type="button" id="nav-home" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5z"/></svg>
+        <span>Home</span>
+      </button>
+      <button type="button" id="nav-schedule">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 9h16"/></svg>
+        <span>Schedule</span>
+      </button>
+    </nav>
+  </div>
+
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="clock-title">
+      <p class="clock-title" id="clock-title">Start</p>
+      <div class="readout">
+        <span id="clock-hm">8:00</span>
+        <div class="ampm">
+          <button type="button" id="ap-am">AM</button>
+          <button type="button" id="ap-pm">PM</button>
+        </div>
+      </div>
+      <div class="face" id="face">
+        <div class="minute-hand" id="minute-hand"></div>
+        <div class="hour-hand" id="hour-hand"></div>
+        <div class="hub"></div>
+      </div>
+      <div class="minute-row">
+        <button type="button" id="min-down" aria-label="One minute earlier">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>
+        </button>
+        <span>Minute</span>
+        <button type="button" id="min-up" aria-label="One minute later">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
+        </button>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" id="clock-cancel">Cancel</button>
+        <button type="button" id="clock-set" class="primary">Set</button>
+      </div>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
